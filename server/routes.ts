@@ -507,6 +507,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Upload user photo
+  app.post("/api/users/upload-photo", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.files || !req.files.photo) {
+        return res.status(400).json({ message: "No photo uploaded" });
+      }
+
+      const photo = req.files.photo;
+      const fileName = `${Date.now()}-${photo.name}`;
+      const uploadPath = `./uploads/${fileName}`;
+
+      // Move photo to uploads directory
+      await photo.mv(uploadPath);
+
+      // Update user's avatar URL
+      const avatarUrl = `/uploads/${fileName}`;
+      await storage.updateUser(req.user.id, { avatarUrl });
+
+      res.json({ avatarUrl });
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      res.status(500).json({ message: "Failed to upload photo" });
+    }
+  });
+
   // Update user profile
   app.put("/api/users/:id", isAuthenticated, async (req, res) => {
     try {
