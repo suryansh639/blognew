@@ -112,22 +112,19 @@ export default function HomePage() {
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-neutral-900 mb-6">Discover stories that matter</h1>
             <p className="text-xl text-neutral-600 mb-10">Read and share new perspectives on just about any topic. Everyone's welcome.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              {!user ? (
-                <>
-                  <Button
-                    className="px-8 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors text-lg shadow-lg hover:shadow-xl"
-                    onClick={() => setLocation("/auth")}
-                  >
-                    Get started
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="px-8 py-3 text-neutral-700 rounded-full font-medium border-2 border-neutral-300 hover:bg-neutral-100 transition-colors text-lg"
-                  >
-                    Learn more
-                  </Button>
-                </>
-              ) : (
+              <Button
+                className="px-8 py-3 bg-red-500 text-white rounded-full font-medium hover:bg-red-600 transition-colors text-lg shadow-lg hover:shadow-xl"
+                onClick={() => setLocation("/auth")}
+              >
+                Get started
+              </Button>
+              <Button
+                variant="outline"
+                className="px-8 py-3 text-neutral-700 rounded-full font-medium border-2 border-neutral-300 hover:bg-neutral-100 transition-colors text-lg"
+              >
+                Learn more
+              </Button>
+              {user && (
                 <Button
                   className="px-8 py-3 bg-primary-500 text-white rounded-full font-medium hover:bg-primary-600 transition-colors shadow-lg"
                   onClick={() => setLocation("/create-article")}
