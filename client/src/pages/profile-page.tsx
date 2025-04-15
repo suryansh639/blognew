@@ -147,23 +147,25 @@ export default function ProfilePage() {
                   <AvatarFallback className="text-3xl">{getInitials(profileUser)}</AvatarFallback>
                 </Avatar>
                 {isOwnProfile && (
-                  <label className="cursor-pointer flex gap-2">
+                  <div className="flex flex-col items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2 relative"
+                      disabled={isUploading}
+                      onClick={() => document.getElementById('photo-upload')?.click()}
+                    >
+                      <Camera className="h-4 w-4" />
+                      {isUploading ? "Uploading..." : "Upload Photo"}
+                    </Button>
                     <Input
+                      id="photo-upload"
                       type="file"
                       accept="image/*"
                       className="hidden"
                       onChange={handlePhotoUpload}
                       disabled={isUploading}
                     />
-                    <Button 
-                      variant="outline"
-                      className="flex items-center gap-2"
-                      disabled={isUploading}
-                    >
-                      <Camera className="h-4 w-4" />
-                      {isUploading ? "Uploading..." : "Upload Photo"}
-                    </Button>
-                  </label>
+                  </div>
                 )}
               </div>
 
