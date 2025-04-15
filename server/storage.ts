@@ -14,6 +14,9 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db, pool } from "./db";
+import { and, eq, desc, sql, count } from "drizzle-orm";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -610,4 +613,704 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  sessionStore: any; // Using any to avoid type errors for now
+
+  constructor() {
+    const PostgresSessionStore = connectPg(session);
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
+    });
+  }
+
+  // Users
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  // Articles
+  async createArticle(article: InsertArticle): Promise<Article> {
+    const [newArticle] = await db.insert(articles).values({
+      ...article,
+      createdAt: new Date()
+    }).returning();
+    return newArticle;
+  }
+
+  async getArticle(id: number): Promise<ArticleWithAuthor | undefined> {
+    const [article] = await db.select().from(articles).where(eq(articles.id, id));
+    if (!article) return undefined;
+
+    const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+    if (!author) return undefined;
+
+    const tags = await this.getTagsByArticleId(id);
+
+    const [likesResult] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(eq(likes.articleId, id));
+
+    const [commentsResult] = await db
+      .select({ count: count() })
+      .from(comments)
+      .where(eq(comments.articleId, id));
+
+    return {
+      ...article,
+      author,
+      tags,
+      _count: {
+        likes: Number(likesResult?.count) || 0,
+        comments: Number(commentsResult?.count) || 0
+      }
+    };
+  }
+
+  async updateArticle(id: number, data: Partial<InsertArticle>): Promise<Article | undefined> {
+    const [updatedArticle] = await db
+      .update(articles)
+      .set(data)
+      .where(eq(articles.id, id))
+      .returning();
+    return updatedArticle;
+  }
+
+  async deleteArticle(id: number): Promise<boolean> {
+    // First delete related data due to foreign key constraints
+    await db.delete(articleTags).where(eq(articleTags.articleId, id));
+    await db.delete(comments).where(eq(comments.articleId, id));
+    await db.delete(likes).where(eq(likes.articleId, id));
+    await db.delete(bookmarks).where(eq(bookmarks.articleId, id));
+
+    // Then delete the article
+    const result = await db.delete(articles).where(eq(articles.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getArticles(options: { limit?: number; offset?: number; tag?: string; authorId?: number } = {}): Promise<ArticleWithAuthor[]> {
+    const { limit = 10, offset = 0, tag, authorId } = options;
+
+    let query = db.select().from(articles).orderBy(desc(articles.createdAt)).limit(limit).offset(offset);
+
+    if (authorId) {
+      query = query.where(eq(articles.authorId, authorId));
+    }
+
+    const fetchedArticles = await query;
+    const result: ArticleWithAuthor[] = [];
+
+    for (const article of fetchedArticles) {
+      const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+      if (!author) continue;
+
+      const tags = await this.getTagsByArticleId(article.id);
+
+      const [likesResult] = await db
+        .select({ count: count() })
+        .from(likes)
+        .where(eq(likes.articleId, article.id));
+
+      const [commentsResult] = await db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.articleId, article.id));
+
+      if (tag) {
+        const hasTag = tags.some(t => t.name.toLowerCase() === tag.toLowerCase());
+        if (!hasTag) continue;
+      }
+
+      result.push({
+        ...article,
+        author,
+        tags,
+        _count: {
+          likes: Number(likesResult?.count) || 0,
+          comments: Number(commentsResult?.count) || 0
+        }
+      });
+    }
+
+    return result;
+  }
+
+  async getFeaturedArticles(limit: number = 3): Promise<ArticleWithAuthor[]> {
+    const likeCounts = await db
+      .select({
+        articleId: likes.articleId,
+        count: count()
+      })
+      .from(likes)
+      .groupBy(likes.articleId)
+      .orderBy(desc(sql`count`))
+      .limit(limit);
+
+    const result: ArticleWithAuthor[] = [];
+
+    for (const item of likeCounts) {
+      const [article] = await db.select().from(articles).where(eq(articles.id, item.articleId));
+      if (!article) continue;
+
+      const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+      if (!author) continue;
+
+      const tags = await this.getTagsByArticleId(article.id);
+
+      result.push({
+        ...article,
+        author,
+        tags,
+        _count: {
+          likes: Number(item.count) || 0,
+          comments: (await this.getCommentsByArticleId(article.id)).length
+        }
+      });
+    }
+
+    // If we don't have enough featured articles, get the most recent ones
+    if (result.length < limit) {
+      const recentArticles = await db
+        .select()
+        .from(articles)
+        .orderBy(desc(articles.createdAt))
+        .limit(limit - result.length);
+
+      for (const article of recentArticles) {
+        // Skip if already in results
+        if (result.some(a => a.id === article.id)) continue;
+
+        const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+        if (!author) continue;
+
+        const tags = await this.getTagsByArticleId(article.id);
+
+        const [likesResult] = await db
+          .select({ count: count() })
+          .from(likes)
+          .where(eq(likes.articleId, article.id));
+
+        const [commentsResult] = await db
+          .select({ count: count() })
+          .from(comments)
+          .where(eq(comments.articleId, article.id));
+
+        result.push({
+          ...article,
+          author,
+          tags,
+          _count: {
+            likes: Number(likesResult?.count) || 0,
+            comments: Number(commentsResult?.count) || 0
+          }
+        });
+      }
+    }
+
+    return result;
+  }
+
+  // Tags
+  async createTag(tag: InsertTag): Promise<Tag> {
+    // Check if tag already exists
+    const existingTag = await this.getTagByName(tag.name);
+    if (existingTag) return existingTag;
+
+    const [newTag] = await db.insert(tags).values(tag).returning();
+    return newTag;
+  }
+
+  async getTagByName(name: string): Promise<Tag | undefined> {
+    const [tag] = await db
+      .select()
+      .from(tags)
+      .where(sql`LOWER(${tags.name}) = LOWER(${name})`);
+    return tag;
+  }
+
+  async getAllTags(): Promise<Tag[]> {
+    return db.select().from(tags);
+  }
+
+  async getPopularTags(limit: number = 10): Promise<Tag[]> {
+    const tagUsage = await db
+      .select({
+        tagId: articleTags.tagId,
+        count: count()
+      })
+      .from(articleTags)
+      .groupBy(articleTags.tagId)
+      .orderBy(desc(sql`count`))
+      .limit(limit);
+
+    const result: Tag[] = [];
+
+    for (const item of tagUsage) {
+      const [tag] = await db.select().from(tags).where(eq(tags.id, item.tagId));
+      if (tag) result.push(tag);
+    }
+
+    // If we don't have enough tags, get the remaining ones
+    if (result.length < limit) {
+      const remainingTags = await db
+        .select()
+        .from(tags)
+        .limit(limit - result.length);
+
+      for (const tag of remainingTags) {
+        if (!result.some(t => t.id === tag.id)) {
+          result.push(tag);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  // ArticleTags
+  async addTagToArticle(articleTag: InsertArticleTag): Promise<ArticleTag> {
+    // Check if association already exists
+    const [existing] = await db
+      .select()
+      .from(articleTags)
+      .where(
+        and(
+          eq(articleTags.articleId, articleTag.articleId),
+          eq(articleTags.tagId, articleTag.tagId)
+        )
+      );
+
+    if (existing) return existing;
+
+    const [newArticleTag] = await db
+      .insert(articleTags)
+      .values(articleTag)
+      .returning();
+
+    return newArticleTag;
+  }
+
+  async removeTagFromArticle(articleId: number, tagId: number): Promise<boolean> {
+    const result = await db
+      .delete(articleTags)
+      .where(
+        and(
+          eq(articleTags.articleId, articleId),
+          eq(articleTags.tagId, tagId)
+        )
+      );
+
+    return result.rowCount > 0;
+  }
+
+  async getTagsByArticleId(articleId: number): Promise<Tag[]> {
+    const articleTagsResult = await db
+      .select()
+      .from(articleTags)
+      .where(eq(articleTags.articleId, articleId));
+
+    const result: Tag[] = [];
+
+    for (const at of articleTagsResult) {
+      const [tag] = await db.select().from(tags).where(eq(tags.id, at.tagId));
+      if (tag) result.push(tag);
+    }
+
+    return result;
+  }
+
+  // Comments
+  async createComment(comment: InsertComment): Promise<Comment> {
+    const [newComment] = await db
+      .insert(comments)
+      .values({
+        ...comment,
+        createdAt: new Date()
+      })
+      .returning();
+
+    return newComment;
+  }
+
+  async getCommentsByArticleId(articleId: number): Promise<CommentWithAuthor[]> {
+    const commentsResult = await db
+      .select()
+      .from(comments)
+      .where(eq(comments.articleId, articleId))
+      .orderBy(desc(comments.createdAt));
+
+    const result: CommentWithAuthor[] = [];
+
+    for (const comment of commentsResult) {
+      const [author] = await db.select().from(users).where(eq(users.id, comment.authorId));
+      if (author) {
+        result.push({
+          ...comment,
+          author
+        });
+      }
+    }
+
+    return result;
+  }
+
+  async deleteComment(id: number): Promise<boolean> {
+    const result = await db.delete(comments).where(eq(comments.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Likes
+  async likeArticle(like: InsertLike): Promise<Like> {
+    // Check if already liked
+    const [existing] = await db
+      .select()
+      .from(likes)
+      .where(
+        and(
+          eq(likes.userId, like.userId),
+          eq(likes.articleId, like.articleId)
+        )
+      );
+
+    if (existing) return existing;
+
+    const [newLike] = await db.insert(likes).values(like).returning();
+    return newLike;
+  }
+
+  async unlikeArticle(userId: number, articleId: number): Promise<boolean> {
+    const result = await db
+      .delete(likes)
+      .where(
+        and(
+          eq(likes.userId, userId),
+          eq(likes.articleId, articleId)
+        )
+      );
+
+    return result.rowCount > 0;
+  }
+
+  async isArticleLiked(userId: number, articleId: number): Promise<boolean> {
+    const [like] = await db
+      .select()
+      .from(likes)
+      .where(
+        and(
+          eq(likes.userId, userId),
+          eq(likes.articleId, articleId)
+        )
+      );
+
+    return !!like;
+  }
+
+  async getLikeCount(articleId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(likes)
+      .where(eq(likes.articleId, articleId));
+
+    return Number(result?.count) || 0;
+  }
+
+  // Follows
+  async followUser(follow: InsertFollow): Promise<Follow> {
+    const isFollowing = await this.isFollowing(follow.followerId, follow.followingId);
+    if (isFollowing) {
+      return follow;
+    }
+
+    const [newFollow] = await db.insert(follows).values(follow).returning();
+    return newFollow;
+  }
+
+  async unfollowUser(followerId: number, followingId: number): Promise<boolean> {
+    const result = await db
+      .delete(follows)
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId)
+        )
+      );
+
+    return result.rowCount > 0;
+  }
+
+  async isFollowing(followerId: number, followingId: number): Promise<boolean> {
+    const [follow] = await db
+      .select()
+      .from(follows)
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId)
+        )
+      );
+
+    return !!follow;
+  }
+
+  async getFollowerCount(userId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+
+    return Number(result?.count) || 0;
+  }
+
+  async getFollowingCount(userId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    return Number(result?.count) || 0;
+  }
+
+  async getFollowers(userId: number): Promise<User[]> {
+    const followsResult = await db
+      .select()
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+
+    const result: User[] = [];
+
+    for (const follow of followsResult) {
+      const [user] = await db.select().from(users).where(eq(users.id, follow.followerId));
+      if (user) result.push(user);
+    }
+
+    return result;
+  }
+
+  async getFollowing(userId: number): Promise<User[]> {
+    const followsResult = await db
+      .select()
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    const result: User[] = [];
+
+    for (const follow of followsResult) {
+      const [user] = await db.select().from(users).where(eq(users.id, follow.followingId));
+      if (user) result.push(user);
+    }
+
+    return result;
+  }
+
+  async getPopularAuthors(limit: number = 5): Promise<UserWithStats[]> {
+    // Get follower counts for each user
+    const followerCounts = await db
+      .select({
+        userId: follows.followingId,
+        count: count()
+      })
+      .from(follows)
+      .groupBy(follows.followingId)
+      .orderBy(desc(sql`count`))
+      .limit(limit);
+
+    const result: UserWithStats[] = [];
+
+    for (const item of followerCounts) {
+      const [user] = await db.select().from(users).where(eq(users.id, item.userId));
+      if (!user) continue;
+
+      // Count articles by this user
+      const [articlesResult] = await db
+        .select({ count: count() })
+        .from(articles)
+        .where(eq(articles.authorId, user.id));
+
+      // Count people this user is following
+      const [followingResult] = await db
+        .select({ count: count() })
+        .from(follows)
+        .where(eq(follows.followerId, user.id));
+
+      result.push({
+        ...user,
+        _count: {
+          articles: Number(articlesResult?.count) || 0,
+          followers: Number(item.count) || 0,
+          following: Number(followingResult?.count) || 0
+        }
+      });
+    }
+
+    // If we don't have enough popular authors, get recent users
+    if (result.length < limit) {
+      const recentUsers = await db
+        .select()
+        .from(users)
+        .limit(limit - result.length);
+
+      for (const user of recentUsers) {
+        // Skip if already in results
+        if (result.some(u => u.id === user.id)) continue;
+
+        // Count articles by this user
+        const [articlesResult] = await db
+          .select({ count: count() })
+          .from(articles)
+          .where(eq(articles.authorId, user.id));
+
+        // Count followers
+        const [followersResult] = await db
+          .select({ count: count() })
+          .from(follows)
+          .where(eq(follows.followingId, user.id));
+
+        // Count people this user is following
+        const [followingResult] = await db
+          .select({ count: count() })
+          .from(follows)
+          .where(eq(follows.followerId, user.id));
+
+        result.push({
+          ...user,
+          _count: {
+            articles: Number(articlesResult?.count) || 0,
+            followers: Number(followersResult?.count) || 0,
+            following: Number(followingResult?.count) || 0
+          }
+        });
+      }
+    }
+
+    return result;
+  }
+
+  // Bookmarks
+  async bookmarkArticle(bookmark: InsertBookmark): Promise<Bookmark> {
+    const isBookmarked = await this.isArticleBookmarked(bookmark.userId, bookmark.articleId);
+    if (isBookmarked) {
+      return bookmark;
+    }
+
+    const [newBookmark] = await db.insert(bookmarks).values(bookmark).returning();
+    return newBookmark;
+  }
+
+  async unbookmarkArticle(userId: number, articleId: number): Promise<boolean> {
+    const result = await db
+      .delete(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.articleId, articleId)
+        )
+      );
+
+    return result.rowCount > 0;
+  }
+
+  async isArticleBookmarked(userId: number, articleId: number): Promise<boolean> {
+    const [bookmark] = await db
+      .select()
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.userId, userId),
+          eq(bookmarks.articleId, articleId)
+        )
+      );
+
+    return !!bookmark;
+  }
+
+  async getUserBookmarks(userId: number): Promise<ArticleWithAuthor[]> {
+    const bookmarksResult = await db
+      .select()
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId));
+
+    const result: ArticleWithAuthor[] = [];
+
+    for (const bookmark of bookmarksResult) {
+      const [article] = await db.select().from(articles).where(eq(articles.id, bookmark.articleId));
+      if (!article) continue;
+
+      const [author] = await db.select().from(users).where(eq(users.id, article.authorId));
+      if (!author) continue;
+
+      const tags = await this.getTagsByArticleId(article.id);
+
+      const [likesResult] = await db
+        .select({ count: count() })
+        .from(likes)
+        .where(eq(likes.articleId, article.id));
+
+      const [commentsResult] = await db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.articleId, article.id));
+
+      result.push({
+        ...article,
+        author,
+        tags,
+        _count: {
+          likes: Number(likesResult?.count) || 0,
+          comments: Number(commentsResult?.count) || 0
+        }
+      });
+    }
+
+    return result;
+  }
+}
+
+// Initialize database with sample tags
+async function initializeDatabase() {
+  try {
+    // Check if tags already exist
+    const existingTags = await db.select().from(tags);
+    
+    // Only seed if no tags exist
+    if (existingTags.length === 0) {
+      const initialTags = [
+        "Programming", "Design", "Technology", "Data Science", 
+        "AI", "Business", "Web Development", "JavaScript", 
+        "React", "CSS"
+      ];
+      
+      for (const tagName of initialTags) {
+        await db.insert(tags).values({ name: tagName });
+      }
+      console.log("Database initialized with sample tags");
+    }
+  } catch (error) {
+    console.error("Error initializing database:", error);
+  }
+}
+
+// Initialize the database with sample data
+initializeDatabase();
+
+export const storage = new DatabaseStorage();
