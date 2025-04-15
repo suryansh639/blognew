@@ -124,7 +124,7 @@ export default function AuthPage() {
               >
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="register">Sign Up</TabsTrigger>
+                  <TabsTrigger value="register" className="text-white">Sign Up</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="login">
@@ -137,7 +137,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter your username" {...field} />
+                              <Input placeholder="Enter your username" className="placeholder-white" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -151,7 +151,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input type="password" placeholder="Enter your password" {...field} />
+                              <Input type="password" placeholder="Enter your password" className="placeholder-white" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
