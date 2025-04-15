@@ -22,65 +22,65 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 10;
-  
+
   // Parse query parameters
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tagParam = params.get("tag");
     const pageParam = params.get("page");
-    
+
     if (tagParam) {
       setSelectedTag(tagParam);
     }
-    
+
     if (pageParam) {
       setCurrentPage(parseInt(pageParam) || 1);
     }
   }, [location]);
-  
+
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams();
-    
+
     if (selectedTag) {
       params.set("tag", selectedTag);
     }
-    
+
     if (currentPage > 1) {
       params.set("page", currentPage.toString());
     }
-    
+
     const newUrl = params.toString() ? `/?${params.toString()}` : "/";
-    
+
     if (location !== newUrl) {
       setLocation(newUrl, { replace: true });
     }
   }, [selectedTag, currentPage, setLocation]);
-  
+
   const { data: articles, isLoading, error } = useQuery<ArticleWithAuthor[]>({
     queryKey: ["/api/articles", { limit, offset: (currentPage - 1) * limit, tag: selectedTag }],
     queryFn: async () => {
       const offset = (currentPage - 1) * limit;
       let url = `/api/articles?limit=${limit}&offset=${offset}`;
-      
+
       if (selectedTag) {
         url += `&tag=${encodeURIComponent(selectedTag)}`;
       }
-      
+
       const res = await fetch(url);
-      
+
       // Get total count from headers or estimate from data
       const totalCountHeader = res.headers.get("X-Total-Count");
       if (totalCountHeader) {
         const totalCount = parseInt(totalCountHeader);
         setTotalPages(Math.ceil(totalCount / limit));
       }
-      
+
       if (!res.ok) throw new Error("Failed to fetch articles");
       return res.json();
     },
   });
-  
+
   // If we don't have a total count header, estimate from data
   useEffect(() => {
     if (articles && articles.length < limit && currentPage === 1) {
@@ -90,12 +90,12 @@ export default function HomePage() {
       setTotalPages(currentPage + 1);
     }
   }, [articles, currentPage, limit]);
-  
+
   const handleTagSelect = (tag: string | null) => {
     setSelectedTag(tag);
     setCurrentPage(1); // Reset to page 1 when changing tag
   };
-  
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -104,7 +104,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      
+
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-white to-neutral-50 border-b border-neutral-200 py-16 md:py-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -129,7 +129,7 @@ export default function HomePage() {
                 </>
               ) : (
                 <Button
-                  className="px-8 py-3 bg-primary-500 text-white rounded-full font-medium hover:bg-primary-600 transition-colors"
+                  className="px-8 py-3 bg-primary-500 text-white rounded-full font-medium hover:bg-primary-600 transition-colors shadow-lg"
                   onClick={() => setLocation("/create-article")}
                 >
                   Write an article
@@ -139,10 +139,10 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      
+
       {/* Featured Articles */}
       <FeaturedArticles />
-      
+
       {/* Main Content */}
       <section className="py-10 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,7 +151,7 @@ export default function HomePage() {
             <div className="lg:w-2/3 lg:pr-12">
               {/* Tags Filter */}
               <TagFilter selectedTag={selectedTag} onSelectTag={handleTagSelect} />
-              
+
               {/* Articles List */}
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, index) => (
@@ -208,7 +208,7 @@ export default function HomePage() {
                   </p>
                 </div>
               )}
-              
+
               {/* Pagination */}
               <Pagination 
                 currentPage={currentPage} 
@@ -216,7 +216,7 @@ export default function HomePage() {
                 onPageChange={handlePageChange} 
               />
             </div>
-            
+
             {/* Sidebar */}
             <div className="lg:w-1/3 mt-12 lg:mt-0">
               <PopularAuthors />
@@ -226,7 +226,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      
+
       <Footer />
     </div>
   );

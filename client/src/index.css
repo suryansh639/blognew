@@ -8,6 +8,14 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-neutral-800;
+  }
+
+  button {
+    @apply text-neutral-800 dark:text-white;
+  }
+
+  a {
+    @apply text-neutral-800 dark:text-white;
   }
 }
