@@ -10,6 +10,9 @@ import {
   analyzeWritingQuality,
   generateAudioFromText
 } from "./openai";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { comments } from "@shared/schema";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -276,14 +279,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/comments/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const comment = await storage.commentsData.get(id);
+      
+      // Get all comments for the article to find the one we want to delete
+      // This is a workaround since we don't have a direct getComment method
+      // In a real app, we would add a getComment method to the storage interface
+      const allComments = await db.select().from(comments).where(eq(comments.id, id));
+      const comment = allComments[0];
       
       if (!comment) {
         return res.status(404).json({ message: "Comment not found" });
       }
       
       // Check if user is the author of the comment
-      if (comment.authorId !== req.user.id) {
+      if (comment.authorId !== req.user?.id) {
         return res.status(403).json({ message: "You are not authorized to delete this comment" });
       }
       
@@ -594,6 +602,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(tags);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch popular tags" });
+    }
+  });
+  
+  // ----- AI Feature Routes -----
+  
+  // Generate article summary
+  app.post("/api/ai/summary", async (req, res) => {
+    try {
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.length < 10) {
+        return res.status(400).json({ message: "Valid content is required" });
+      }
+      
+      const summary = await generateArticleSummary(content);
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      res.status(500).json({ message: "Failed to generate summary" });
+    }
+  });
+  
+  // Generate related topics
+  app.post("/api/ai/related-topics", async (req, res) => {
+    try {
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.length < 10) {
+        return res.status(400).json({ message: "Valid content is required" });
+      }
+      
+      const topics = await generateRelatedTopics(content);
+      res.json({ topics });
+    } catch (error) {
+      console.error("Error generating related topics:", error);
+      res.status(500).json({ message: "Failed to generate related topics" });
+    }
+  });
+  
+  // Analyze writing quality
+  app.post("/api/ai/analyze", async (req, res) => {
+    try {
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.length < 10) {
+        return res.status(400).json({ message: "Valid content is required" });
+      }
+      
+      const analysis = await analyzeWritingQuality(content);
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error analyzing writing:", error);
+      res.status(500).json({ message: "Failed to analyze writing" });
+    }
+  });
+  
+  // Generate text-to-speech audio
+  app.post("/api/ai/text-to-speech", async (req, res) => {
+    try {
+      const { text } = req.body;
+      
+      if (!text || typeof text !== 'string' || text.length < 10) {
+        return res.status(400).json({ message: "Valid text is required" });
+      }
+      
+      const audioBuffer = await generateAudioFromText(text);
+      
+      if (!audioBuffer) {
+        return res.status(500).json({ message: "Failed to generate audio" });
+      }
+      
+      // Set appropriate headers for audio
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', audioBuffer.length);
+      
+      // Send the audio buffer
+      res.end(audioBuffer);
+    } catch (error) {
+      console.error("Error generating audio:", error);
+      res.status(500).json({ message: "Failed to generate audio" });
     }
   });
   
