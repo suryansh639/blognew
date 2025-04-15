@@ -141,26 +141,29 @@ export default function ProfilePage() {
           <div className="max-w-4xl mx-auto">
             {/* Profile Header */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-12">
-              <div className="relative">
+              <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-32 w-32">
                   <AvatarImage src={profileUser.avatarUrl || undefined} alt={profileUser.username} />
                   <AvatarFallback className="text-3xl">{getInitials(profileUser)}</AvatarFallback>
                 </Avatar>
                 {isOwnProfile && (
-                  <div className="absolute bottom-0 right-0">
-                    <label className="cursor-pointer">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handlePhotoUpload}
-                        disabled={isUploading}
-                      />
-                      <div className="bg-primary-500 hover:bg-primary-600 text-white p-2 rounded-full">
-                        <Camera className="h-4 w-4" />
-                      </div>
-                    </label>
-                  </div>
+                  <label className="cursor-pointer flex gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                      disabled={isUploading}
+                    />
+                    <Button 
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      disabled={isUploading}
+                    >
+                      <Camera className="h-4 w-4" />
+                      {isUploading ? "Uploading..." : "Upload Photo"}
+                    </Button>
+                  </label>
                 )}
               </div>
 
