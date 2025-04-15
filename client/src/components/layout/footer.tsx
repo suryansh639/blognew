@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <img src={blogCompanyLogo} alt="Blog Company" className="h-8 w-auto mb-6 brightness-0 invert" />
+            <img src={blogCompanyLogo} alt="Blog Company" className="h-12 w-auto mb-6" />
             <p className="text-neutral-400 text-sm mb-6">
               Share your knowledge and experiences with our community. We provide the platform, you provide the insights.
             </p>
