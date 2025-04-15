@@ -170,7 +170,7 @@ export default function AuthPage() {
                                   onCheckedChange={field.onChange} 
                                 />
                               </FormControl>
-                              <FormLabel className="text-sm font-normal">Remember me</FormLabel>
+                              <FormLabel className="text-sm font-normal text-black">Remember me</FormLabel>
                             </FormItem>
                           )}
                         />
