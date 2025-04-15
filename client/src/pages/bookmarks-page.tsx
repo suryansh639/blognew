@@ -11,7 +11,7 @@ export default function BookmarksPage() {
   const { user } = useAuth();
 
   const { data: bookmarks, isLoading } = useQuery<ArticleWithAuthor[]>({
-    queryKey: [`/api/users/${user?.id}/bookmarks`],
+    queryKey: [`/api/bookmarks`],
     enabled: !!user,
   });
 
@@ -28,14 +28,20 @@ export default function BookmarksPage() {
 
             {isLoading ? (
               <div className="text-center py-8">Loading bookmarks...</div>
-            ) : bookmarks?.length === 0 ? (
+            ) : !bookmarks || bookmarks.length === 0 ? (
               <div className="text-center py-8 text-neutral-600">
                 You haven't bookmarked any articles yet.
               </div>
             ) : (
               <div className="space-y-6">
-                {bookmarks?.map((article) => (
-                  <ArticleListItem key={article.id} article={article} />
+                {bookmarks.map((article) => (
+                  <ArticleListItem 
+                    key={article.id} 
+                    article={{
+                      ...article,
+                      isBookmarked: true // Since these are bookmarked articles
+                    }} 
+                  />
                 ))}
               </div>
             )}

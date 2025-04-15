@@ -61,7 +61,19 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
   const handleAddImage = () => {
     const url = prompt('Enter image URL:');
     if (url && editor) {
+      // Add image to editor
       editor.chain().focus().setImage({ src: url }).run();
+      
+      // Preview the image in editor
+      const imageNode = editor.view.state.doc.nodeAt(editor.view.state.selection.from);
+      if (imageNode && imageNode.type.name === 'image') {
+        const imageElement = document.createElement('img');
+        imageElement.src = url;
+        imageElement.style.maxWidth = '100%';
+        imageElement.style.height = 'auto';
+        imageElement.style.margin = '1rem 0';
+        editor.view.dom.appendChild(imageElement);
+      }
     }
   };
 
