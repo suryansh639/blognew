@@ -55,7 +55,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 dark:text-white">
+    <header className="sticky top-0 z-50 bg-white border-b border-neutral-200 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -68,7 +68,7 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
             <Link href="/">
-              <a className={`text-neutral-600 dark:text-neutral-300 hover:text-primary-500 px-3 py-2 text-sm font-medium ${location === "/" ? "text-primary-500" : ""}`}>
+              <a className={`text-neutral-700 hover:text-red-500 px-3 py-2 text-sm font-medium transition-colors ${location === "/" ? "text-red-500" : ""}`}>
                 Home
               </a>
             </Link>
