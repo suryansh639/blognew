@@ -13,6 +13,7 @@ import {
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { comments } from "@shared/schema";
+import { hashPassword } from "./auth";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
