@@ -176,7 +176,7 @@ export default function ProfilePage() {
                   <p className="text-neutral-700 mb-4 max-w-lg">{profileUser.bio}</p>
                 )}
 
-                <div className="flex gap-6 justify-center md:justify-start mb-4">
+                <div className="flex gap-6 justify-center md:justify-start mb-4 bg-white p-4 rounded-lg shadow-sm">
                   <div className="text-center">
                     <span className="block font-bold text-neutral-900">{profileUser._count?.articles || 0}</span>
                     <span className="text-sm text-neutral-600">Articles</span>

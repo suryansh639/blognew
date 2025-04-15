@@ -18,6 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
+// Assume EditorContent component and necessary imports are available.  Adjust as needed for your rich text editor library.
+// import { EditorContent } from 'your-rich-text-editor-library';
+const EditorContent = ({editor, className}: any) => <div>{/* Replace with your actual rich text editor rendering */}</div>
+
+
 interface EditorProps {
   onSubmit: (data: any) => void;
   isSubmitting: boolean;
@@ -34,7 +39,10 @@ type ArticleFormValues = z.infer<typeof articleFormSchema>;
 export default function Editor({ onSubmit, isSubmitting, defaultValues }: EditorProps) {
   const [tags, setTags] = useState<string[]>(defaultValues?.tags?.map((t: any) => t.name) || []);
   const [tagInput, setTagInput] = useState("");
-  
+
+  // Assume editor state management is handled appropriately within your rich text editor library.
+  const [editor, setEditor] = useState(null);
+
   const { data: popularTags } = useQuery({
     queryKey: ["/api/tags/popular"],
     queryFn: async () => {
@@ -43,7 +51,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
       return res.json();
     },
   });
-  
+
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleFormSchema),
     defaultValues: {
@@ -56,7 +64,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
       tagInput: "",
     },
   });
-  
+
   useEffect(() => {
     if (defaultValues && defaultValues.tags) {
       const tagNames = defaultValues.tags.map((tag: any) => tag.name);
@@ -64,7 +72,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
       form.setValue("tags", tagNames);
     }
   }, [defaultValues, form]);
-  
+
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       const newTags = [...tags, tagInput.trim()];
@@ -73,20 +81,20 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
       setTagInput("");
     }
   };
-  
+
   const handleRemoveTag = (tagToRemove: string) => {
     const newTags = tags.filter(tag => tag !== tagToRemove);
     setTags(newTags);
     form.setValue("tags", newTags);
   };
-  
+
   const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddTag();
     }
   };
-  
+
   const handlePopularTagClick = (tagName: string) => {
     if (!tags.includes(tagName)) {
       const newTags = [...tags, tagName];
@@ -94,12 +102,15 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
       form.setValue("tags", newTags);
     }
   };
-  
+
   const handleFormSubmit = (data: ArticleFormValues) => {
     const { tagInput, ...formData } = data;
+    //  Assume editor state is correctly handled to get content from rich text editor.
+    const content = editor?.getContent();// Replace with your actual method to get content from the rich text editor
     onSubmit({
       ...formData,
       tags,
+      content
     });
   };
 
@@ -123,7 +134,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="excerpt"
@@ -141,7 +152,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="content"
@@ -149,17 +160,15 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
             <FormItem>
               <FormLabel>Content</FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder="Write your article here" 
-                  {...field} 
-                  className="min-h-80"
-                />
+                <div className="min-h-[500px] border rounded-lg p-4">
+                  <EditorContent editor={editor} className="prose max-w-none" />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -180,7 +189,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="coverImage"
@@ -198,7 +207,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
             )}
           />
         </div>
-        
+
         <div>
           <FormLabel>Tags</FormLabel>
           <div className="flex flex-wrap gap-2 mb-2">
@@ -232,7 +241,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
               Add
             </Button>
           </div>
-          
+
           {popularTags && popularTags.length > 0 && (
             <div className="mt-2">
               <p className="text-sm text-neutral-500 mb-1">Popular tags:</p>
@@ -251,7 +260,7 @@ export default function Editor({ onSubmit, isSubmitting, defaultValues }: Editor
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline">
             Save as Draft

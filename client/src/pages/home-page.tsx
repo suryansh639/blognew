@@ -106,7 +106,8 @@ export default function HomePage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-white to-neutral-50 border-b border-neutral-200 py-16 md:py-24">
+      <section className="bg-gradient-to-b from-red-50 to-white border-b border-neutral-200 py-16 md:py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-neutral-100/25 bg-[size:20px_20px] [mask-image:linear-gradient(to_bottom,white,transparent)]" />
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl font-serif font-bold text-neutral-900 mb-6">Discover stories that matter</h1>

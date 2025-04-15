@@ -6,11 +6,23 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import { AuthProvider } from "./hooks/use-auth";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { ProtectedRoute } from "./lib/protected-route";
 import ArticlePage from "./pages/article-page";
 import CreateArticlePage from "./pages/create-article-page";
 import ProfilePage from "./pages/profile-page";
 import EditArticlePage from "./pages/edit-article-page";
+
+function ScrollToTop() {
+  const [location] = useLocation();
+  
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location]);
+  
+  return null;
+}
 
 function Router() {
   return (

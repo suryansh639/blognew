@@ -104,7 +104,7 @@ export default function ArticleListItem({ article }: ArticleListItemProps) {
   };
 
   return (
-    <article className="pb-10 mb-10 border-b border-neutral-200">
+    <article className="pb-10 mb-10 border-b border-neutral-200 hover:bg-neutral-50 transition-colors p-6 rounded-lg">
       <div className="flex items-center mb-4">
         <Link href={`/profile/${article.author.id}`}>
           <a className="flex items-center">
