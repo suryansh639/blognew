@@ -55,7 +55,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-neutral-200">
+    <header className="sticky top-0 z-50 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 dark:text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -68,18 +68,18 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
             <Link href="/">
-              <a className={`text-neutral-600 hover:text-primary-500 px-3 py-2 text-sm font-medium ${location === "/" ? "text-primary-500" : ""}`}>
+              <a className={`text-neutral-600 dark:text-neutral-300 hover:text-primary-500 px-3 py-2 text-sm font-medium ${location === "/" ? "text-primary-500" : ""}`}>
                 Home
               </a>
             </Link>
             <Link href="/">
-              <a className="text-neutral-600 hover:text-primary-500 px-3 py-2 text-sm font-medium">
+              <a className="text-neutral-600 dark:text-neutral-300 hover:text-primary-500 px-3 py-2 text-sm font-medium">
                 Explore
               </a>
             </Link>
             {user && (
               <Link href="/bookmarks">
-                <a className="text-neutral-600 hover:text-primary-500 px-3 py-2 text-sm font-medium">
+                <a className="text-neutral-600 dark:text-neutral-300 hover:text-primary-500 px-3 py-2 text-sm font-medium">
                   Bookmarks
                 </a>
               </Link>
@@ -87,15 +87,15 @@ export default function Header() {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center text-neutral-600 hover:text-primary-500 px-3 py-2 text-sm font-medium">
+                  <button className="flex items-center text-neutral-600 dark:text-neutral-300 hover:text-primary-500 px-3 py-2 text-sm font-medium">
                     <Bell className="h-5 w-5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="p-2 text-sm font-medium text-center border-b">
+                <DropdownMenuContent align="end" className="w-56 dark:bg-neutral-800 dark:border-neutral-700">
+                  <div className="p-2 text-sm font-medium text-center border-b dark:border-neutral-700 dark:text-white">
                     Notifications
                   </div>
-                  <div className="py-4 text-xs text-center text-neutral-500">
+                  <div className="py-4 text-xs text-center text-neutral-500 dark:text-neutral-400">
                     No new notifications
                   </div>
                 </DropdownMenuContent>
@@ -121,6 +121,15 @@ export default function Header() {
             </div>
           </div>
           
+          {/* Dark Mode Toggle */}
+          <button 
+            onClick={toggleDarkMode}
+            className="p-2 mr-2 text-neutral-500 hover:text-primary-500 transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+
           {/* User Menu (logged in state) */}
           <div className="flex items-center ml-4">
             {user ? (
@@ -133,7 +142,7 @@ export default function Header() {
                 <div className="ml-4 relative flex-shrink-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                      <button className="bg-white dark:bg-neutral-800 rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                         <span className="sr-only">Open user menu</span>
                         <Avatar>
                           <AvatarImage src={user.avatarUrl || undefined} alt={user.username} />
@@ -141,35 +150,37 @@ export default function Header() {
                         </Avatar>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <div className="p-2 text-sm font-medium">
+                    <DropdownMenuContent align="end" className="w-56 dark:bg-neutral-800 dark:border-neutral-700">
+                      <div className="p-2 text-sm font-medium dark:text-white">
                         {user.firstName && user.lastName 
                           ? `${user.firstName} ${user.lastName}`
                           : user.username}
                       </div>
-                      <DropdownMenuSeparator />
+                      <DropdownMenuSeparator className="dark:border-neutral-700" />
                       <Link href={`/profile/${user.id}`}>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem className="dark:hover:bg-neutral-700 dark:text-neutral-200">
                           Profile
                         </DropdownMenuItem>
                       </Link>
                       <Link href="/create-article">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem className="dark:hover:bg-neutral-700 dark:text-neutral-200">
                           Write Article
                         </DropdownMenuItem>
                       </Link>
                       <Link href="/bookmarks">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem className="dark:hover:bg-neutral-700 dark:text-neutral-200">
                           Bookmarks
                         </DropdownMenuItem>
                       </Link>
                       <Link href="/settings">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem className="dark:hover:bg-neutral-700 dark:text-neutral-200">
                           Settings
                         </DropdownMenuItem>
                       </Link>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout}>
+                      <DropdownMenuSeparator className="dark:border-neutral-700" />
+                      <DropdownMenuItem 
+                        onClick={handleLogout}
+                        className="dark:hover:bg-neutral-700 dark:text-neutral-200">
                         Sign out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -192,7 +203,7 @@ export default function Header() {
           <div className="flex md:hidden">
             <button 
               type="button" 
-              className="inline-flex items-center justify-center p-2 rounded-md text-neutral-400 hover:text-neutral-500 hover:bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+              className="inline-flex items-center justify-center p-2 rounded-md text-neutral-400 hover:text-neutral-500 dark:text-neutral-300 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               <span className="sr-only">Open main menu</span>
