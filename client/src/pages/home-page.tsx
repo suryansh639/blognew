@@ -124,14 +124,6 @@ export default function HomePage() {
               >
                 Learn more
               </Button>
-              {user && (
-                <Button
-                  className="px-8 py-3 bg-primary-500 text-white rounded-full font-medium hover:bg-primary-600 transition-colors shadow-lg"
-                  onClick={() => setLocation("/create-article")}
-                >
-                  Write an article
-                </Button>
-              )}
             </div>
           </div>
         </div>

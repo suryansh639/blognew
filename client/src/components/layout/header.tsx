@@ -108,8 +108,8 @@ export default function Header() {
             {user ? (
               <>
                 <Link href="/create-article">
-                  <Button variant="default" className="hidden md:block bg-primary-500 hover:bg-primary-600 rounded-full">
-                    Write
+                  <Button variant="default" className="hidden md:block bg-primary-500 hover:bg-primary-600 rounded-full px-6">
+                    Write an article
                   </Button>
                 </Link>
                 <div className="ml-4 relative flex-shrink-0">
