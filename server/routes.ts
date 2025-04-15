@@ -4,6 +4,12 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertArticleSchema, insertCommentSchema } from "@shared/schema";
 import { ZodError } from "zod";
+import { 
+  generateArticleSummary, 
+  generateRelatedTopics, 
+  analyzeWritingQuality,
+  generateAudioFromText
+} from "./openai";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: Function) => {
